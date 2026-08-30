@@ -2484,12 +2484,6 @@ namespace IceCreamVanEffectFix
 }
 
 
-static void __fastcall ResetTimers_Dont(void* /*obj*/, void*, uint32_t /*time*/)
-{
-	// Do nothing
-}
-
-
 void InjectDelayedPatches_VC_Common(bool bHasDebugMenu, const wchar_t* wcModulePath, const ModuleList& moduleList)
 {
 	using namespace Memory;
@@ -3639,27 +3633,6 @@ void Patch_VC_Common()
 
 		InjectHook( hookPoint.get<void>( 0x21 ), CTimer::Update_SilentPatch, HookType::Call );
 		InjectHook( hookPoint.get<void>( 0x21 + 5 ), jmpPoint, HookType::Jump );
-	}
-	TXN_CATCH();
-
-
-	// Don't reset audio timers in CTimer::Initialise as that interferes with the teardown
-	try
-	{
-		// Pattern to allow both EB and E9 (as 1.0/1.1 use EB but Steam uses E9)
-		// 50 E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E?
-		constexpr uint8_t bytes[] { 0x50u, 0xE8u, 0x00u, 0x00u, 0x00u, 0x00u, 0xE8u, 0x00u, 0x00u, 0x00u, 0x00u, 0xE8u, 0x00u, 0x00u, 0x00u, 0x00u, 0xE9u };
-		constexpr uint8_t mask[]  { 0xFFu, 0xFFu, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu, 0x00u, 0x00u, 0x00u, 0x00u, 0xFDu };
-
-		std::array<void*, 2> reset_timers_to_nop = {
-			get_pattern("E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 59 89 EC 5D C3"),
-			pattern({ bytes, std::size(bytes) }, { mask, std::size(mask) }).get_first(1),
-		};
-
-		for (void* func : reset_timers_to_nop)
-		{
-			InjectHook(func, ResetTimers_Dont);
-		}
 	}
 	TXN_CATCH();
 
